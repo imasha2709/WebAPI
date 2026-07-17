@@ -5,100 +5,269 @@ const app = express();
 
 app.use(express.json());
 
-// Load seed.json ONCE at startup
+
+// Load seed.json ONCE
 const data = JSON.parse(
     fs.readFileSync("./seed.json", "utf8")
 );
 
-// Home Route
-app.get("/", (req, res) => {
+
+// Helper function - latest ping
+function getLastPing(vehicleId) {
+
+    const pings = data.pings
+        .filter(p => p.vehicle_id == vehicleId)
+        .sort((a, b) => 
+            new Date(b.timestamp) - new Date(a.timestamp)
+        );
+
+    if (pings.length === 0) {
+        return null;
+    }
+
+    const ping = pings[0];
+
+    return {
+        ping_id: ping.id,
+        vehicle_id: ping.vehicle_id,
+        timestamp: ping.timestamp,
+        lat: ping.latitude,
+        lng: ping.longitude,
+        speed: ping.speed || 0
+    };
+}
+
+
+// Home
+app.get("/", (req,res)=>{
     res.json({
-        status: "ok",
-        session: "tuktuk-monitoring-api"
+        status:"ok",
+        session:"NB6007CEM S5"
     });
 });
 
-// Provinces
-app.get("/provinces", (req, res) => {
-    res.json(data.provinces);
+
+// ---------------- PROVINCES ----------------
+
+app.get("/provinces",(req,res)=>{
+
+    const provinces = data.provinces.map(p=>({
+        province_id:p.id,
+        name:p.name
+    }));
+
+    res.json(provinces);
 });
 
-app.get("/provinces/:provinceId", (req, res) => {
-    const province = data.provinces.find(
-        p => p.id == req.params.provinceId
+
+app.get("/provinces/:provinceId",(req,res)=>{
+
+    const p = data.provinces.find(
+        x=>x.id == req.params.provinceId
     );
 
-    if (!province) {
-        return res.status(404).json({ message: "Province not found" });
+    if(!p){
+        return res.status(404).json({
+            message:"Province not found"
+        });
     }
 
-    res.json(province);
+    res.json({
+        province_id:p.id,
+        name:p.name
+    });
 });
 
-// Districts
-app.get("/districts", (req, res) => {
-    res.json(data.districts);
+
+// ---------------- DISTRICTS ----------------
+
+
+app.get("/districts",(req,res)=>{
+
+    const districts=data.districts.map(d=>({
+        district_id:d.id,
+        name:d.name,
+        province_id:d.province_id
+    }));
+
+    res.json(districts);
 });
 
-app.get("/districts/:districtId", (req, res) => {
-    const district = data.districts.find(
-        d => d.id == req.params.districtId
+
+app.get("/districts/:districtId",(req,res)=>{
+
+    const d=data.districts.find(
+        x=>x.id==req.params.districtId
     );
 
-    if (!district) {
-        return res.status(404).json({ message: "District not found" });
+    if(!d){
+        return res.status(404).json({
+            message:"District not found"
+        });
     }
 
-    res.json(district);
+    res.json({
+        district_id:d.id,
+        name:d.name,
+        province_id:d.province_id
+    });
+
 });
 
-// Stations
-app.get("/stations", (req, res) => {
-    res.json(data.stations);
+
+// ---------------- STATIONS ----------------
+
+
+app.get("/stations",(req,res)=>{
+
+    const stations=data.stations.map(s=>({
+        station_id:s.id,
+        name:s.name,
+        district_id:s.district_id
+    }));
+
+    res.json(stations);
+
 });
 
-app.get("/stations/:stationId", (req, res) => {
-    const station = data.stations.find(
-        s => s.id == req.params.stationId
+
+app.get("/stations/:stationId",(req,res)=>{
+
+    const s=data.stations.find(
+        x=>x.id==req.params.stationId
     );
 
-    if (!station) {
-        return res.status(404).json({ message: "Station not found" });
+    if(!s){
+        return res.status(404).json({
+            message:"Station not found"
+        });
     }
 
-    res.json(station);
+
+    res.json({
+        station_id:s.id,
+        name:s.name,
+        district_id:s.district_id
+    });
+
 });
 
-// Vehicles
-app.get("/vehicles", (req, res) => {
-    res.json(data.vehicles);
+
+// ---------------- VEHICLES ----------------
+
+
+app.get("/vehicles",(req,res)=>{
+
+    const vehicles=data.vehicles.map(v=>({
+
+        vehicle_id:v.id,
+        reg_number:v.registration_number,
+        device_id:v.device_id,
+        station_id:v.station_id
+
+    }));
+
+    res.json(vehicles);
+
 });
 
-app.get("/vehicles/:vehicleId", (req, res) => {
-    const vehicle = data.vehicles.find(
-        v => v.id == req.params.vehicleId
+
+// Vehicle Composite
+app.get("/vehicles/:vehicleId",(req,res)=>{
+
+
+    const v=data.vehicles.find(
+        x=>x.id==req.params.vehicleId
     );
 
-    if (!vehicle) {
-        return res.status(404).json({ message: "Vehicle not found" });
+
+    if(!v){
+        return res.status(404).json({
+            message:"Vehicle not found"
+        });
     }
 
-    res.json(vehicle);
+
+    res.json({
+
+        vehicle_id:v.id,
+        reg_number:v.registration_number,
+        device_id:v.device_id,
+        station_id:v.station_id,
+
+        last_ping:getLastPing(v.id)
+
+    });
+
+
 });
 
-// Scoped Pings
-app.get("/vehicles/:vehicleId/pings", (req, res) => {
 
-    const pings = data.pings.filter(
-        p => p.vehicle_id == req.params.vehicleId
-    );
+
+// Vehicle pings
+
+app.get("/vehicles/:vehicleId/pings",(req,res)=>{
+
+
+    const pings=data.pings
+        .filter(
+            p=>p.vehicle_id==req.params.vehicleId
+        )
+        .map(p=>({
+
+            ping_id:p.id,
+            vehicle_id:p.vehicle_id,
+            timestamp:p.timestamp,
+            lat:p.latitude,
+            lng:p.longitude,
+            speed:p.speed || 0
+
+        }));
+
 
     res.json(pings);
 
 });
 
-const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, () => {
+
+// Last Position
+
+app.get("/vehicles/:vehicleId/last-position",(req,res)=>{
+
+
+    const lastPing=getLastPing(req.params.vehicleId);
+
+
+    if(!lastPing){
+
+        return res.status(404).json({
+            message:"No location found"
+        });
+
+    }
+
+
+    res.json({
+
+        vehicle_id:lastPing.vehicle_id,
+        timestamp:lastPing.timestamp,
+        lat:lastPing.lat,
+        lng:lastPing.lng,
+        speed:lastPing.speed
+
+    });
+
+
+});
+
+
+
+// Start server
+
+const PORT=process.env.PORT || 3000;
+
+
+app.listen(PORT,()=>{
     console.log(`Server running on ${PORT}`);
 });
