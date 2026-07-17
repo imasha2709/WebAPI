@@ -1,5 +1,6 @@
 const express = require("express");
 const fs = require("fs");
+const basicAuth = require("./middleware/basicAuth");
 
 const app = express();
 
@@ -42,7 +43,7 @@ function getLastPing(vehicleId) {
 app.get("/", (req,res)=>{
     res.json({
         status:"ok",
-        session:"NB6007CEM S5"
+        session:"TUKTUK-MONITORING-API"
     });
 });
 
@@ -156,7 +157,7 @@ app.get("/stations/:stationId",(req,res)=>{
 // ---------------- VEHICLES ----------------
 
 
-app.get("/vehicles",(req,res)=>{
+app.get("/vehicles",basicAuth,(req,res)=>{
 
     const vehicles=data.vehicles.map(v=>({
 
