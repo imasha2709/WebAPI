@@ -16,6 +16,14 @@ function basicAuth(req, res, next) {
     }
 
 
+    if (!auth.startsWith("Basic ")) {
+
+        return res.status(401).json({
+            message: "Invalid authentication type"
+        });
+    }
+
+
     const encoded = auth.split(" ")[1];
 
 
@@ -24,18 +32,18 @@ function basicAuth(req, res, next) {
         .toString();
 
 
-    const [username, password] =
-        decoded.split(":");
+    const [username,password] = decoded.split(":");
 
 
-    if (
+    if(
         username !== "police" ||
         password !== "nibm2024"
-    ) {
+    ){
 
         return res.status(403).json({
-            message: "Invalid credentials"
+            message:"Invalid credentials"
         });
+
     }
 
 

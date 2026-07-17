@@ -1,76 +1,159 @@
-const express = require("express");
-const fs = require("fs");
+const express=require("express");
 
-const app = express();
+const router=express.Router();
 
-app.use(express.json());
+const basicAuth=require("../middleware/basicAuth");
+
+const apiKeyAuth=require("../middleware/apiKeyAuth");
 
 
-// Load database
-const data = JSON.parse(
-    fs.readFileSync("./seed.json","utf8")
+module.exports=(data)=>{
+
+
+// POST ping
+
+router.post(
+"/vehicles/:vehicleId/pings",
+apiKeyAuth,
+(req,res)=>{
+
+
+const vehicle=data.vehicles.find(
+v=>v.id==req.params.vehicleId
 );
 
 
-// Make data available
-app.locals.data = data;
+if(!vehicle){
+
+return res.status(404).json({
+error:"Vehicle not found"
+});
+
+}
 
 
 
-// Middleware
-const basicAuth = require("./middleware/basicAuth");
-
-
-// Routes
-
-const provinceRoutes = require("./routes/provinces");
-const districtRoutes = require("./routes/districts");
-const stationRoutes = require("./routes/stations");
-const vehicleRoutes = require("./routes/vehicles");
-const pingRoutes = require("./routes/pings");
+const {
+latitude,
+longitude,
+speed
+}=req.body;
 
 
 
-// Home
+if(
+latitude===undefined ||
+longitude===undefined ||
+speed===undefined
+){
 
-app.get("/",(req,res)=>{
+return res.status(400).json({
+error:"Missing location data"
+});
 
-    res.json({
-        status:"ok",
-        session:"TUKTUK-MONITORING-API"
-    });
+}
+
+
+
+const ping={
+
+
+id:"p-"+Date.now(),
+
+vehicle_id:req.params.vehicleId,
+
+latitude,
+
+longitude,
+
+speed,
+
+timestamp:new Date().toISOString()
+
+
+};
+
+
+
+data.pings.push(ping);
+
+
+
+res
+.status(201)
+.location(
+`/vehicles/${vehicle.id}/pings/${ping.id}`
+)
+.set(
+"ETag",
+`"${ping.id}"`
+)
+.set(
+"Last-Modified",
+ping.timestamp
+)
+.json(ping);
+
+
 
 });
 
 
 
-// Protected GET routes
 
-app.use("/provinces",basicAuth,provinceRoutes);
+// GET all vehicle pings
 
-app.use("/districts",basicAuth,districtRoutes);
-
-app.use("/stations",basicAuth,stationRoutes);
-
-app.use("/vehicles",basicAuth,vehicleRoutes);
+router.get(
+"/vehicles/:vehicleId/pings",
+basicAuth,
+(req,res)=>{
 
 
-
-// Ping write route
-// NOT Basic Auth
-app.use("/vehicles",pingRoutes);
-
+const pings=data.pings.filter(
+p=>p.vehicle_id==req.params.vehicleId
+);
 
 
+res.json(pings);
 
-
-const PORT = process.env.PORT || 3000;
-
-
-app.listen(PORT,()=>{
-
-    console.log(
-        `Server running on port ${PORT}`
-    );
 
 });
+
+
+
+
+
+// GET single ping
+
+router.get(
+"/vehicles/:vehicleId/pings/:pingId",
+basicAuth,
+(req,res)=>{
+
+
+const ping=data.pings.find(
+p=>
+p.vehicle_id==req.params.vehicleId &&
+p.id==req.params.pingId
+);
+
+
+if(!ping){
+
+return res.status(404).json({
+error:"Ping not found"
+});
+
+}
+
+
+res.json(ping);
+
+
+});
+
+
+
+return router;
+
+};

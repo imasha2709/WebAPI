@@ -1,31 +1,10 @@
 function apiKeyAuth(req,res,next){
 
 
-    const data=req.app.locals.data;
-
-
     const vehicleId=req.params.vehicleId;
 
 
-
-    const vehicle =
-        data.vehicles.find(
-            v=>v.id==vehicleId
-        );
-
-
-    if(!vehicle){
-
-        return res.status(404).json({
-            message:"Vehicle not found"
-        });
-
-    }
-
-
-
     const key=req.headers["x-api-key"];
-
 
 
     if(!key){
@@ -37,20 +16,22 @@ function apiKeyAuth(req,res,next){
     }
 
 
+    const deviceKeys={
 
-    const validKey =
-        `key_${vehicleId}`;
+        "v-01":"key_v01",
+        "v-02":"key_v02",
+        "v-03":"key_v03"
+
+    };
 
 
-
-    if(key!==validKey){
+    if(deviceKeys[vehicleId] !== key){
 
         return res.status(403).json({
             message:"Invalid API key"
         });
 
     }
-
 
 
     next();
