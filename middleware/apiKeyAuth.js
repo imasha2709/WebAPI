@@ -1,42 +1,33 @@
-function apiKeyAuth(req,res,next){
+module.exports = (data) => {
+
+    return (req, res, next) => {
+
+        const apiKey = req.headers["x-api-key"];
 
 
-    const vehicleId=req.params.vehicleId;
+        const vehicle = data.vehicles.find(
+            v => v.id == req.params.vehicleId
+        );
 
 
-    const key=req.headers["x-api-key"];
+        if (!vehicle) {
+            return res.status(404).json({
+                error: "Vehicle not found"
+            });
+        }
 
 
-    if(!key){
+        if (!apiKey || apiKey !== vehicle.device_id) {
 
-        return res.status(401).json({
-            message:"API key required"
-        });
+            return res.status(403).json({
+                error: "Forbidden: Invalid API key for this vehicle"
+            });
 
-    }
+        }
 
 
-    const deviceKeys={
-
-        "v-01":"key_v01",
-        "v-02":"key_v02",
-        "v-03":"key_v03"
+        next();
 
     };
 
-
-    if(deviceKeys[vehicleId] !== key){
-
-        return res.status(403).json({
-            message:"Invalid API key"
-        });
-
-    }
-
-
-    next();
-
-}
-
-
-module.exports=apiKeyAuth;
+};
